@@ -1,3 +1,8 @@
+Version 1.4.4 - 11-2013
+This version is equal to version 1.2.1. I just updated the version number in order to join the webtrees version numbers. 
+This version of the module can be used on the webtrees 1.4x branch.
+=========================================================================================================================
+
 Version 1.2.1 - 09-10-2013
 * Bug fix. If there is not a lot of text in a family entry and the image size is larger than the min-height, the subsequent sibling-family slides into that entry. So the layout gets destroyed. Fixed.
 
