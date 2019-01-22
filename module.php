@@ -257,63 +257,68 @@ class FancyTreeviewModule extends AbstractModule implements ModuleConfigInterfac
 			// See mediafirewall.php
 			case 'thumbnail':
 				$mid			 = Filter::get('mid', WT_REGEX_XREF);
-				$media			 = Media::getInstance($mid, $this->tree());
-				$mimetype		 = $media->mimeType();
-				$cache_filename	 = $this->module()->cacheFileName($media);
-				$filetime		 = filemtime($cache_filename);
-				$filetimeHeader	 = gmdate('D, d M Y H:i:s', $filetime) . ' GMT';
-				$expireOffset	 = 3600 * 24 * 7; // tell browser to cache this image for 7 days
-				$expireHeader	 = gmdate('D, d M Y H:i:s', WT_TIMESTAMP + $expireOffset) . ' GMT';
-				$etag			 = $media->getEtag();
-				$filesize		 = filesize($cache_filename);
+                $media			 = Media::getInstance($mid, $this->tree());
 
-				// parse IF_MODIFIED_SINCE header from client
-				$if_modified_since = 'x';
-				if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
-					$if_modified_since = preg_replace('/;.*$/', '', $_SERVER['HTTP_IF_MODIFIED_SINCE']);
-				}
+                if ($media) {
+                    $mimetype		 = $media->mimeType();
+                    $cache_filename	 = $this->module()->cacheFileName($media);
+                    $filetime		 = filemtime($cache_filename);
+                    $filetimeHeader	 = gmdate('D, d M Y H:i:s', $filetime) . ' GMT';
+                    $expireOffset	 = 3600 * 24 * 7; // tell browser to cache this image for 7 days
+                    $expireHeader	 = gmdate('D, d M Y H:i:s', WT_TIMESTAMP + $expireOffset) . ' GMT';
+                    $etag			 = $media->getEtag();
+                    $filesize		 = filesize($cache_filename);
 
-				// parse IF_NONE_MATCH header from client
-				$if_none_match = 'x';
-				if (isset($_SERVER['HTTP_IF_NONE_MATCH'])) {
-					$if_none_match = str_replace('"', '', $_SERVER['HTTP_IF_NONE_MATCH']);
-				}
+                    // parse IF_MODIFIED_SINCE header from client
+                    $if_modified_since = 'x';
+                    if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
+                        $if_modified_since = preg_replace('/;.*$/', '', $_SERVER['HTTP_IF_MODIFIED_SINCE']);
+                    }
 
-				// add caching headers.  allow browser to cache file, but not proxy
-				header('Last-Modified: ' . $filetimeHeader);
-				header('ETag: "' . $etag . '"');
-				header('Expires: ' . $expireHeader);
-				header('Cache-Control: max-age=' . $expireOffset . ', s-maxage=0, proxy-revalidate');
+                    // parse IF_NONE_MATCH header from client
+                    $if_none_match = 'x';
+                    if (isset($_SERVER['HTTP_IF_NONE_MATCH'])) {
+                        $if_none_match = str_replace('"', '', $_SERVER['HTTP_IF_NONE_MATCH']);
+                    }
 
-				// if this file is already in the user’s cache, don’t resend it
-				// first check if the if_modified_since param matches
-				if ($if_modified_since === $filetimeHeader) {
-					// then check if the etag matches
-					if ($if_none_match === $etag) {
-						http_response_code(304);
-						return;
-					}
-				}
+                    // add caching headers.  allow browser to cache file, but not proxy
+                    header('Last-Modified: ' . $filetimeHeader);
+                    header('ETag: "' . $etag . '"');
+                    header('Expires: ' . $expireHeader);
+                    header('Cache-Control: max-age=' . $expireOffset . ', s-maxage=0, proxy-revalidate');
 
-				// send headers for the image
-				header('Content-Type: ' . $mimetype);
-				header('Content-Disposition: filename="' . basename($cache_filename) . '"');
-				header('Content-Length: ' . $filesize);
+                    // if this file is already in the user’s cache, don’t resend it
+                    // first check if the if_modified_since param matches
+                    if ($if_modified_since === $filetimeHeader) {
+                        // then check if the etag matches
+                        if ($if_none_match === $etag) {
+                            http_response_code(304);
+                            return;
+                        }
+                    }
 
-				// Some servers disable fpassthru() and readfile()
-				if (function_exists('readfile')) {
-					readfile($cache_filename);
-				} else {
-					$fp = fopen($cache_filename, 'rb');
-					if (function_exists('fpassthru')) {
-						fpassthru($fp);
-					} else {
-						while (!feof($fp)) {
-							echo fread($fp, 65536);
-						}
-					}
-					fclose($fp);
-				}
+                    // send headers for the image
+                    header('Content-Type: ' . $mimetype);
+                    header('Content-Disposition: filename="' . basename($cache_filename) . '"');
+                    header('Content-Length: ' . $filesize);
+
+                    // Some servers disable fpassthru() and readfile()
+                    if (function_exists('readfile')) {
+                        readfile($cache_filename);
+                    } else {
+                        $fp = fopen($cache_filename, 'rb');
+                        if (function_exists('fpassthru')) {
+                            fpassthru($fp);
+                        } else {
+                            while (!feof($fp)) {
+                                echo fread($fp, 65536);
+                            }
+                        }
+                        fclose($fp);
+                    }
+                } else {
+                    return;
+                }
 				break;
 
 			default:
@@ -429,7 +434,7 @@ class FancyTreeviewModule extends AbstractModule implements ModuleConfigInterfac
 			return new FancyTreeviewPdfClass;
 		}
 	}
-	
+
 	public static function intVersion() {
 		$version = (int) str_replace(".", "", str_replace("-dev", "", self::CUSTOM_VERSION));
 		if ($version > 999) {
